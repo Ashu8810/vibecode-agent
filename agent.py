@@ -10,6 +10,8 @@ import os
 import time
 import uuid
 import threading
+import json
+import sqlite3
 from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 from engine import engine, SecurityGuardian, SyntaxGuardian, VibeStackDetector
