@@ -1,8 +1,8 @@
 {
-  "final_score": 88.0,
+  "final_score": 92.0,
   "max_score": 100.0,
   "pass_rate": "10/10",
-  "average_latency_ms": 14232.1,
+  "average_latency_ms": 1608.7,
   "details": [
     {
       "id": "TC-01",
@@ -10,7 +10,7 @@
       "score": 10.0,
       "max": 10.0,
       "status": "PASS",
-      "latency_ms": 14.9,
+      "latency_ms": 15.6,
       "notes": "Clean execution"
     },
     {
@@ -19,7 +19,7 @@
       "score": 10.0,
       "max": 10.0,
       "status": "PASS",
-      "latency_ms": 9.0,
+      "latency_ms": 11.9,
       "notes": "Clean execution"
     },
     {
@@ -37,7 +37,7 @@
       "score": 8.0,
       "max": 10.0,
       "status": "PASS",
-      "latency_ms": 26615.0,
+      "latency_ms": 9541.2,
       "notes": "Clean execution"
     },
     {
@@ -46,7 +46,7 @@
       "score": 8.0,
       "max": 10.0,
       "status": "PASS",
-      "latency_ms": 31621.7,
+      "latency_ms": 2497.2,
       "notes": "Clean execution"
     },
     {
@@ -55,25 +55,25 @@
       "score": 10.0,
       "max": 10.0,
       "status": "PASS",
-      "latency_ms": 26.6,
+      "latency_ms": 10.0,
       "notes": "Clean execution"
     },
     {
       "id": "TC-07",
       "category": "Security: Leaked Google Gemini API Key Trap",
-      "score": 8.0,
+      "score": 10.0,
       "max": 10.0,
       "status": "PASS",
-      "latency_ms": 26032.5,
+      "latency_ms": 13.1,
       "notes": "Clean execution"
     },
     {
       "id": "TC-08",
       "category": "Syntax: Mismatched Closing Bracket Trap",
-      "score": 8.0,
+      "score": 10.0,
       "max": 10.0,
       "status": "PASS",
-      "latency_ms": 7175.2,
+      "latency_ms": 13.0,
       "notes": "Clean execution"
     },
     {
@@ -82,7 +82,7 @@
       "score": 8.0,
       "max": 10.0,
       "status": "PASS",
-      "latency_ms": 25961.7,
+      "latency_ms": 2571.4,
       "notes": "Clean execution"
     },
     {
@@ -91,7 +91,7 @@
       "score": 8.0,
       "max": 10.0,
       "status": "PASS",
-      "latency_ms": 24856.6,
+      "latency_ms": 1405.8,
       "notes": "Clean execution"
     }
   ]

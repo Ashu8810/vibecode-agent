@@ -328,6 +328,111 @@ def benchmark():
     })
 
 
+# ─────────────────────────────────────────────────────────────
+# 3. Official Model Context Protocol (MCP) Server Endpoint
+# ─────────────────────────────────────────────────────────────
+
+MCP_TOOLS = [
+    {
+        "name": "vibecode_debug",
+        "description": "Diagnose runtime errors, hydration bugs, and build failures in Next.js, Supabase, Tailwind, or Bolt.new with surgical unified git diffs.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "error": {"type": "string", "description": "Console error message or stack trace"},
+                "code": {"type": "string", "description": "Broken source code snippet"}
+            },
+            "required": ["error"]
+        }
+    },
+    {
+        "name": "vibecode_prompt",
+        "description": "Craft high-precision architectural prompts for Cursor, Bolt.new, Lovable.dev, or v0.dev.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "idea": {"type": "string", "description": "App or feature idea description"}
+            },
+            "required": ["idea"]
+        }
+    },
+    {
+        "name": "vibecode_cursorrules",
+        "description": "Generate custom .cursorrules system configuration file for strict TypeScript/Next.js compliance.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "stack": {"type": "string", "description": "Tech stack details (e.g. Next.js 15, Tailwind v4, Supabase)"}
+            }
+        }
+    },
+    {
+        "name": "vibecode_security_audit",
+        "description": "Scan code for leaked API keys, tokens, unprotected Supabase RLS rows, and security vulnerabilities.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "code": {"type": "string", "description": "Code snippet to audit"}
+            },
+            "required": ["code"]
+        }
+    }
+]
+
+@app.route("/mcp/tools", methods=["GET"])
+def mcp_tools_list():
+    return jsonify({"tools": MCP_TOOLS})
+
+@app.route("/mcp", methods=["POST"])
+def mcp_rpc():
+    payload = request.json or {}
+    method = payload.get("method")
+    rpc_id = payload.get("id", 1)
+
+    if method == "tools/list":
+        return jsonify({
+            "jsonrpc": "2.0",
+            "id": rpc_id,
+            "result": {"tools": MCP_TOOLS}
+        })
+
+    elif method == "tools/call":
+        params = payload.get("params", {})
+        tool_name = params.get("name")
+        args = params.get("arguments", {})
+
+        if tool_name == "vibecode_debug":
+            res = engine.execute(user_input=args.get("error", "Debug issue"), mode="debug", code=args.get("code"), error=args.get("error"))
+        elif tool_name == "vibecode_prompt":
+            res = engine.execute(user_input=args.get("idea", ""), mode="prompt")
+        elif tool_name == "vibecode_cursorrules":
+            res = engine.execute(user_input=args.get("stack", "Next.js 15"), mode="cursorrules")
+        elif tool_name == "vibecode_security_audit":
+            res = engine.execute(user_input="Audit code security", mode="review", code=args.get("code"))
+        else:
+            return jsonify({
+                "jsonrpc": "2.0",
+                "id": rpc_id,
+                "error": {"code": -32601, "message": f"Tool '{tool_name}' not found"}
+            }), 404
+
+        return jsonify({
+            "jsonrpc": "2.0",
+            "id": rpc_id,
+            "result": {
+                "content": [
+                    {"type": "text", "text": res.get("data", {}).get("main_output", "")}
+                ]
+            }
+        })
+
+    return jsonify({
+        "jsonrpc": "2.0",
+        "id": rpc_id,
+        "error": {"code": -32601, "message": "Method not found"}
+    }), 400
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     print(f"""

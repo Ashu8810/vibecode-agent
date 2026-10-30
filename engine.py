@@ -73,12 +73,12 @@ class AgentResponse(BaseModel):
 class SecurityGuardian:
     """Detects leaked credentials, sensitive keys, and common pitfalls."""
     SECRET_PATTERNS = [
-        (re.compile(r'sk-[a-zA-Z0-9_-]{20,}', re.I), "OpenAI/Anthropic Secret Key"),
-        (re.compile(r'AIzaSy[a-zA-Z0-9_-]{33}', re.I), "Google Gemini API Key"),
-        (re.compile(r'eyJhbGciOi[a-zA-Z0-9_.-]{30,}', re.I), "JWT / Supabase Service Role Key"),
-        (re.compile(r'ghp_[a-zA-Z0-9]{36}', re.I), "GitHub Personal Access Token"),
+        (re.compile(r'sk-[a-zA-Z0-9_-]{16,}', re.I), "OpenAI/Anthropic Secret Key"),
+        (re.compile(r'AIzaSy[a-zA-Z0-9_-]{20,}', re.I), "Google Gemini API Key"),
+        (re.compile(r'eyJhbGciOi[a-zA-Z0-9_.-]{25,}', re.I), "JWT / Supabase Service Role Key"),
+        (re.compile(r'ghp_[a-zA-Z0-9]{20,}', re.I), "GitHub Personal Access Token"),
         (re.compile(r'postgres(?:ql)?:\/\/[^:]+:[^@]+@[^\/]+', re.I), "Postgres Connection URI with credentials"),
-        (re.compile(r'(?:stripe_)?[st]k_live_[a-zA-Z0-9]{24,}', re.I), "Stripe Live Secret Key"),
+        (re.compile(r'(?:stripe_)?[st]k_live_[a-zA-Z0-9]{16,}', re.I), "Stripe Live Secret Key"),
         (re.compile(r'AKIA[0-9A-Z]{16}', re.I), "AWS Access Key ID")
     ]
 
@@ -543,7 +543,7 @@ class VibeCodeEngine:
             syntax_issues = SyntaxGuardian.validate_code(code)
 
         # 4. Deterministic Pre-Flight or Model Inference
-        if matched_sig or sec_alerts or (not self.client):
+        if matched_sig or sec_alerts or syntax_issues or (not self.client):
             # Fast-path: instant, 100% accurate verified solution
             response_dict = self._generate_offline_response(
                 user_input=user_input,
@@ -605,7 +605,8 @@ class VibeCodeEngine:
                 contents=full_prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    temperature=0.2
+                    temperature=0.2,
+                    max_output_tokens=1500
                 )
             )
 
