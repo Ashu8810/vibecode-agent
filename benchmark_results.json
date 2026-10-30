@@ -1,0 +1,98 @@
+{
+  "final_score": 96.0,
+  "max_score": 100.0,
+  "pass_rate": "10/10",
+  "average_latency_ms": 177.5,
+  "details": [
+    {
+      "id": "TC-01",
+      "category": "Debug: Next.js 15 Hydration Mismatch",
+      "score": 8.0,
+      "max": 10.0,
+      "status": "PASS",
+      "latency_ms": 1744.0,
+      "notes": "Clean execution"
+    },
+    {
+      "id": "TC-02",
+      "category": "Debug: Bolt.new WebContainer Native C++ Error",
+      "score": 10.0,
+      "max": 10.0,
+      "status": "PASS",
+      "latency_ms": 7.5,
+      "notes": "Clean execution"
+    },
+    {
+      "id": "TC-03",
+      "category": "Debug: Supabase RLS Silent Empty Array",
+      "score": 10.0,
+      "max": 10.0,
+      "status": "PASS",
+      "latency_ms": 3.6,
+      "notes": "Clean execution"
+    },
+    {
+      "id": "TC-04",
+      "category": "Prompt: High-Converting SaaS Architecture for Cursor/Bolt",
+      "score": 10.0,
+      "max": 10.0,
+      "status": "PASS",
+      "latency_ms": 2.6,
+      "notes": "Clean execution"
+    },
+    {
+      "id": "TC-05",
+      "category": "Rules: Custom .cursorrules Generator",
+      "score": 10.0,
+      "max": 10.0,
+      "status": "PASS",
+      "latency_ms": 2.4,
+      "notes": "Clean execution"
+    },
+    {
+      "id": "TC-06",
+      "category": "Security: Leaked Stripe Live Key Detection",
+      "score": 10.0,
+      "max": 10.0,
+      "status": "PASS",
+      "latency_ms": 3.1,
+      "notes": "Clean execution"
+    },
+    {
+      "id": "TC-07",
+      "category": "Security: Leaked Google Gemini API Key Trap",
+      "score": 8.0,
+      "max": 10.0,
+      "status": "PASS",
+      "latency_ms": 3.5,
+      "notes": "Failed security trap alert; "
+    },
+    {
+      "id": "TC-08",
+      "category": "Syntax: Mismatched Closing Bracket Trap",
+      "score": 10.0,
+      "max": 10.0,
+      "status": "PASS",
+      "latency_ms": 2.7,
+      "notes": "Clean execution"
+    },
+    {
+      "id": "TC-09",
+      "category": "Deploy: Zero-Downtime Vercel/Railway Guide",
+      "score": 10.0,
+      "max": 10.0,
+      "status": "PASS",
+      "latency_ms": 2.8,
+      "notes": "Clean execution"
+    },
+    {
+      "id": "TC-10",
+      "category": "Explain: ELI5 Server Actions vs API Routes",
+      "score": 10.0,
+      "max": 10.0,
+      "status": "PASS",
+      "latency_ms": 2.5,
+      "notes": "Clean execution"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+# Security: NEVER commit .env to public Git
+.env
+.env.local
+*.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# OS files
+.DS_Store
