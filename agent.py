@@ -18,18 +18,75 @@ load_dotenv(override=True)
 
 app = Flask(__name__, template_folder="templates")
 
+import sqlite3
+
 # ─────────────────────────────────────────────────────────────
-# In-Memory Job Storage & Idempotency Cache (HireCrew Contract)
+# Persistent SQLite Job Storage & Idempotency (HireCrew Resilient)
 # ─────────────────────────────────────────────────────────────
-# Maps jobId -> job data dict
-JOBS_DB = {}
-# Maps idempotency_key -> jobId
-IDEMPOTENCY_CACHE = {}
+DB_PATH = os.path.join(os.path.dirname(__file__), "vibecode_jobs.db")
+
+def init_db():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS jobs (
+                job_id TEXT PRIMARY KEY,
+                order_id TEXT,
+                idempotency_key TEXT,
+                status TEXT,
+                report TEXT,
+                sources_json TEXT,
+                metadata_json TEXT,
+                created_at REAL
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_idem ON jobs(idempotency_key)")
+
+init_db()
+
+def db_save_job(job_id, order_id, idempotency_key, status, report=None, sources=[], metadata={}):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            INSERT INTO jobs (job_id, order_id, idempotency_key, status, report, sources_json, metadata_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(job_id) DO UPDATE SET
+                status=excluded.status,
+                report=excluded.report,
+                sources_json=excluded.sources_json,
+                metadata_json=excluded.metadata_json
+        """, (
+            job_id, order_id, idempotency_key, status, report,
+            json.dumps(sources), json.dumps(metadata), time.time()
+        ))
+
+def db_get_job(job_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT job_id, order_id, status, report, sources_json, metadata_json FROM jobs WHERE job_id = ?", (job_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "jobId": row[0],
+            "orderId": row[1],
+            "status": row[2],
+            "report": row[3],
+            "sources": json.loads(row[4] or "[]"),
+            "metadata": json.loads(row[5] or "{}")
+        }
+
+def db_get_by_idempotency(idem_key):
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT job_id, status FROM jobs WHERE idempotency_key = ?", (idem_key,))
+        row = cursor.fetchone()
+        if row:
+            return {"jobId": row[0], "status": row[1]}
+        return None
 
 
-def process_hirecrew_job(job_id: str, brief: str, order_id: str):
+def process_hirecrew_job(job_id: str, brief: str, order_id: str, idempotency_key: str):
     """Background task processor for HireCrew job requests."""
-    JOBS_DB[job_id]["status"] = "running"
+    db_save_job(job_id, order_id, idempotency_key, "running")
     
     # Run the VibeCode diagnostic / reasoning engine
     result = engine.execute(user_input=brief)
@@ -39,38 +96,51 @@ def process_hirecrew_job(job_id: str, brief: str, order_id: str):
         
         # Compile HireCrew compliant report
         report_text = f"{data.get('summary', '')}\n\n{data.get('main_output', '')}\n\n"
+        
+        if data.get("security_alerts"):
+            report_text += "\n### ⚠️ Security Guard Alerts:\n"
+            for alert in data["security_alerts"]:
+                report_text += f"- **[{alert.get('level', 'warning').upper()}] {alert.get('title')}**: {alert.get('detail')}\n"
+
         if data.get("code_fixes"):
             for fix in data["code_fixes"]:
-                report_text += f"\n### File Fix: {fix.get('file_path', 'Patch')}\n```\n{fix.get('fixed_code', '')}\n```\n{fix.get('explanation', '')}\n"
+                report_text += f"\n### 🛠️ File Fix: {fix.get('file_path', 'Patch')}\n```typescript\n{fix.get('fixed_code', '')}\n```\n**Explanation:** {fix.get('explanation', '')}\n"
+
+        if data.get("git_diff_patch"):
+            report_text += f"\n### ⚡ Unified Git Diff Patch (Cursor Composer & `git apply` ready):\n```diff\n{data['git_diff_patch']}\n```\n"
         
         if data.get("next_action_steps"):
-            report_text += "\n### Next Steps:\n"
+            report_text += "\n### 📋 Recommended Next Steps:\n"
             for step in data["next_action_steps"]:
                 report_text += f"- {step}\n"
 
-        # Compliant structured sources
+        cost = data.get("cost_metrics", {})
+        if cost:
+            report_text += (
+                f"\n---\n"
+                f"### 📊 Compute & Fair-Value Economics:\n"
+                f"- **Tokens Processed**: ~{cost.get('input_tokens_est', 0)} in / ~{cost.get('output_tokens_est', 0)} out\n"
+                f"- **Raw AI Compute Cost**: ${cost.get('compute_cost_usd', 0.0002):.4f}\n"
+                f"- **HireCrew Micro-Price**: ${cost.get('suggested_5x_price_usd', 0.50):.2f} (5x Cost-Plus Value)\n"
+                f"- **Estimated Margin**: {cost.get('profit_margin_pct', 80.0)}%\n"
+            )
+
         sources = [
             {"title": "Cursor AI Rules Reference", "url": "https://docs.cursor.com/context/rules-for-ai"},
             {"title": "Next.js App Router Documentation", "url": "https://nextjs.org/docs/app"},
             {"title": "Bolt.new WebContainer Environment", "url": "https://webcontainers.io"}
         ]
 
-        JOBS_DB[job_id].update({
-            "status": "delivered",
-            "report": report_text,
-            "sources": sources,
-            "metadata": {
-                "detected_stack": data.get("detected_stack", []),
-                "confidence_score": data.get("confidence_score", 95),
-                "execution_time_ms": data.get("execution_time_ms", 120)
-            }
-        })
+        metadata = {
+            "detected_stack": data.get("detected_stack", []),
+            "confidence_score": data.get("confidence_score", 95),
+            "execution_time_ms": data.get("execution_time_ms", 120),
+            "cost_metrics": data.get("cost_metrics", {})
+        }
+
+        db_save_job(job_id, order_id, idempotency_key, "delivered", report=report_text, sources=sources, metadata=metadata)
     else:
-        JOBS_DB[job_id].update({
-            "status": "failed",
-            "report": "Analysis failed to complete cleanly.",
-            "sources": []
-        })
+        db_save_job(job_id, order_id, idempotency_key, "failed", report="Analysis failed to complete cleanly.")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -79,17 +149,6 @@ def process_hirecrew_job(job_id: str, brief: str, order_id: str):
 
 @app.route("/jobs", methods=["POST"])
 def submit_hirecrew_job():
-    """
-    Contract 01 (HireCrew Developers Spec):
-    POST /jobs
-    Headers:
-      Authorization: Bearer <reviewed integration token>
-      Idempotency-Key: <stable key>
-    Body:
-      {"orderId": "<HireCrew order ID>", "brief": "<buyer task>"}
-    Response:
-      {"jobId": "seller-job-123", "status": "queued"}
-    """
     data = request.json or {}
     order_id = data.get("orderId") or str(uuid.uuid4())
     brief = data.get("brief") or data.get("input") or ""
@@ -97,29 +156,18 @@ def submit_hirecrew_job():
     if not brief.strip():
         return jsonify({"error": "Missing 'brief' task description."}), 400
 
-    # Idempotency Check: Return identical job if already submitted
+    # Idempotency Check
     idempotency_key = request.headers.get("Idempotency-Key") or order_id
-    if idempotency_key in IDEMPOTENCY_CACHE:
-        existing_job_id = IDEMPOTENCY_CACHE[idempotency_key]
-        return jsonify({
-            "jobId": existing_job_id,
-            "status": JOBS_DB[existing_job_id]["status"]
-        }), 200
+    existing = db_get_by_idempotency(idempotency_key)
+    if existing:
+        return jsonify(existing), 200
 
-    # Create new job
+    # Create new persistent job
     job_id = f"vibecode-{uuid.uuid4().hex[:10]}"
-    JOBS_DB[job_id] = {
-        "jobId": job_id,
-        "orderId": order_id,
-        "status": "queued",
-        "created_at": time.time(),
-        "report": None,
-        "sources": []
-    }
-    IDEMPOTENCY_CACHE[idempotency_key] = job_id
+    db_save_job(job_id, order_id, idempotency_key, "queued")
 
     # Process in background thread to prevent client timeouts
-    worker = threading.Thread(target=process_hirecrew_job, args=(job_id, brief, order_id))
+    worker = threading.Thread(target=process_hirecrew_job, args=(job_id, brief, order_id, idempotency_key))
     worker.daemon = True
     worker.start()
 
@@ -131,16 +179,10 @@ def submit_hirecrew_job():
 
 @app.route("/jobs/<job_id>", methods=["GET"])
 def get_hirecrew_job(job_id):
-    """
-    Contract 02 (HireCrew Developers Spec):
-    GET /jobs/<jobId>
-    Polling endpoint returning queued, running, delivered, or failed.
-    """
-    job = JOBS_DB.get(job_id)
+    job = db_get_job(job_id)
     if not job:
         return jsonify({"error": f"Job '{job_id}' not found."}), 404
 
-    # Response matches HireCrew's exact polling schema
     response_payload = {
         "jobId": job["jobId"],
         "status": job["status"]
@@ -148,9 +190,9 @@ def get_hirecrew_job(job_id):
     if job["status"] == "delivered":
         response_payload["report"] = job.get("report")
         response_payload["sources"] = job.get("sources", [])
+        response_payload["cost_metrics"] = job.get("metadata", {}).get("cost_metrics", {})
     elif job["status"] == "failed":
         response_payload["report"] = job.get("report")
-
     return jsonify(response_payload), 200
 
 

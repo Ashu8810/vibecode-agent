@@ -320,6 +320,17 @@
             });
           }
 
+          if (d.git_diff_patch) {
+            display += `=== UNIFIED GIT DIFF (CURSOR COMPOSER READY) ===\n${d.git_diff_patch}\n\n`;
+          }
+
+          if (d.cost_metrics) {
+            display += `=== COMPUTE ECONOMICS (5X COST-PLUS PRICING) ===\n`;
+            display += `Raw AI Compute Cost: $${d.cost_metrics.compute_cost_usd} (~${d.cost_metrics.input_tokens_est + d.cost_metrics.output_tokens_est} tokens)\n`;
+            display += `HireCrew Fair Value Price: $${d.cost_metrics.suggested_5x_price_usd.toFixed(2)} (5x Cost-Plus)\n`;
+            display += `Gross Profit Margin: ${d.cost_metrics.profit_margin_pct}%\n\n`;
+          }
+
           if (d.next_action_steps && d.next_action_steps.length) {
             display += `=== ACTION PLAN ===\n`;
             d.next_action_steps.forEach((s, idx) => display += `${idx+1}. ${s}\n`);
